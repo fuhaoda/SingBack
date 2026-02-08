@@ -1,168 +1,168 @@
 # SingBack 🎤
 
-SingBack 是一个给日常练唱用的网页 App。  
-核心流程很简单：**先听标准音/旋律 -> 再跟唱 -> 立刻看分数和曲线 -> 再唱一次**。
+SingBack is a browser app for practical singing practice.  
+The loop is simple: **hear the target -> sing it back -> see your score and curve -> retry immediately**.
 
-它的目标不是“花哨打卡”，而是让你明确知道：
-- 你是偏高还是偏低
-- 偏了多少
-- 是音准问题、稳定性问题，还是节奏问题
-
----
-
-## 你会看到什么
-
-每道题都有 3 个对比面板（坐标完全一致，方便一眼比较）：
-- `Current`：你刚唱完这次
-- `First`：这道题第一次有效演唱
-- `Best`：这道题当前最高分
-
-每个面板都会显示：
-- 总分（0-100）
-- 分项分：`Acc / Stb / Lock / Rhy`
+The goal is not gamified streaks. The goal is clear feedback:
+- Are you sharp or flat?
+- How far off are you?
+- Is the main issue pitch, stability, lock, or rhythm?
 
 ---
 
-## 2 分钟跑起来
+## What You See
 
-### 环境要求
+Each question has 3 comparison panels (same axes for direct visual comparison):
+- `Current`: your latest attempt
+- `First`: your first valid attempt in this question
+- `Best`: your highest-score attempt in this question
+
+Each panel shows:
+- total score (`0-100`)
+- subscores: `Acc / Stb / Lock / Rhy`
+
+---
+
+## Quick Start (2 minutes)
+
+### Requirements
 - Node.js 20+
 - npm 10+
 
-### 安装
+### Install
 ```bash
 npm install
 ```
 
-### 启动开发环境
+### Run
 ```bash
 npm run dev
 ```
 
-然后打开终端里给出的地址（通常是 `http://localhost:5173`）。
+Open the local URL from the terminal (usually `http://localhost:5173`).
 
-### 可选检查
+### Optional checks
 ```bash
 npm run lint
 npm run test:run
 npm run build
 ```
 
-> 不需要 Python virtual environment。这个项目是纯前端 Node 工程。
+> No Python virtual environment is required. This is a pure frontend Node project.
 
 ---
 
-## 日常使用流程
+## Daily Usage Flow
 
-1. 打开 `Settings`，先设好你的 `minHz / maxHz / doHz`。  
-2. 选择训练模式：`Absolute Match` 或 `Relative Contour`。  
-3. 选择难度 `L1-L6`。  
-4. 点击 `Start Question`，先听题目。  
-5. 倒计时 `3,2,1,Start` 后开始唱。  
-6. 唱完会自动停（或最多 10 秒），然后打分。  
-7. 用 `Record Attempt` 立刻重试，比较 Current / First / Best。  
-
----
-
-## 设置项怎么理解
-
-- `minHz / maxHz`：你的安全发声范围，出题不会超这个边界。
-- `doHz`：你的 1（Do）基准。
-- `Key`：变调（1=C 到 1=B）。
-- `Match Mode`：
-  - `Absolute Match`：要求音高本身也对。
-  - `Relative Contour`：更看重旋律走向和音程关系。
-- `Difficulty`：控制题目的音数、跳进跨度、节奏复杂度。
-- `Tuning`：`12-TET` 或 `Just`。
+1. Open `Settings` and set your `minHz / maxHz / doHz`.
+2. Choose mode: `Absolute Match` or `Relative Contour`.
+3. Choose difficulty `L1-L6`.
+4. Click `Start Question` and listen to the prompt.
+5. Sing after `3,2,1,Start`.
+6. Recording stops automatically (or at 10 seconds max), then scoring appears.
+7. Click `Record Attempt` to retry and compare `Current / First / Best`.
 
 ---
 
-## 每个 Level 在练什么
+## Settings, in Plain Language
 
-下面是“用户视角”的训练目标说明（不是算法参数表）。
-
-### Absolute Match（绝对音准）
-- `L1`：单音持音，先把“唱准一个音”练稳。
-- `L2`：2-3 音，微小变化，开始练换音。
-- `L3`：3-4 音，开始出现更明显的上下行。
-- `L4`：4-5 音，旋律更长，要求连续控制。
-- `L5`：5-6 音，音高跨度更大，节奏更活。
-- `L6`：6-8 音，高密度短句，综合能力训练。
-
-### Relative Contour（相对旋律）
-- `L1`：2 音对比，先练“走向”对不对（上行/下行）。
-- `L2`：3-4 音，开始练短旋律的相对关系。
-- `L3`：4-5 音，加入更明显的音程变化。
-- `L4`：5-6 音，旋律更长、节奏更复杂。
-- `L5`：6-7 音，要求在更大跨度里保持轮廓准确。
-- `L6`：7-9 音，高复杂度旋律，练快速听辨+跟唱。
+- `minHz / maxHz`: your safe vocal range; prompts will stay inside it.
+- `doHz`: your Do reference frequency.
+- `Key`: transposition (`1=C` to `1=B`).
+- `Match Mode`:
+  - `Absolute Match`: your absolute pitch should match the target.
+  - `Relative Contour`: your melodic contour and intervals matter most.
+- `Difficulty`: controls number of notes, pitch leaps, and rhythm complexity.
+- `Tuning`: `12-TET` or `Just`.
 
 ---
 
-## 评分怎么读（通俗版）
+## What Each Level Trains
 
-总分是 0-100。  
-实用建议：先追求“稳定进步”，不用一开始追求满分。
+These are user-facing training goals, not algorithm parameters.
 
-- `Acc`（Accuracy，音准）
-  - 你唱得离目标音有多近。
-  - 分数越高，说明偏差越小。
-  - 越接近高分段，要求会越精细。
+### Absolute Match
+- `L1`: single sustained note; build basic pitch placement.
+- `L2`: 2-3 notes; start clean note transitions.
+- `L3`: 3-4 notes; clearer up/down melodic movement.
+- `L4`: 4-5 notes; longer phrase control.
+- `L5`: 5-6 notes; wider pitch span and more active rhythm.
+- `L6`: 6-8 notes; dense short phrases and full control.
 
-- `Stb`（Stability，稳定）
-  - 你是否在抖、飘、忽高忽低。
-  - 高分说明线条更稳、控制更好。
-
-- `Lock`（锁定）
-  - 你有多少时间在“可接受音准区间”里。
-  - 在很准区间里的时间权重更高，偏得越多权重越低。
-  - 新手友好：不是“瞬间命中”才有分，而是“在可接受区间内待得越久分越高”。
-
-- `Rhy`（Rhythm，节奏）
-  - 你的换音时机和时值比例是否接近题目。
-  - 节奏越贴近参考，分越高。
-
-### Relative 模式的评分重点
-
-`Relative Contour` 不要求你必须唱在和参考完全同一个绝对音高上。  
-它主要看：
-- 旋律走向对不对（上/下/平）
-- 相邻音之间的相对距离是否合理
-- 节奏是否匹配
-
-所以它更适合练“听到旋律后快速找调并复现”。
+### Relative Contour
+- `L1`: 2-note contour check (up/down/flat).
+- `L2`: 3-4 notes; short melodic contour accuracy.
+- `L3`: 4-5 notes; stronger interval changes.
+- `L4`: 5-6 notes; longer contour + richer rhythm.
+- `L5`: 6-7 notes; maintain contour over larger spans.
+- `L6`: 7-9 notes; high-complexity contour reproduction.
 
 ---
 
-## 看分后怎么调整（实战建议）
+## How to Read Scores (Simple Version)
 
-- `Acc` 低：先降难度，减少音数，把每个音先“停稳再换”。
-- `Stb` 低：缩短句子、减小音量波动，先追求平稳出声。
-- `Lock` 低：别急着跑旋律，先把每个音“待住”。
-- `Rhy` 低：先用嘴轻数拍子，再唱；先把节奏做对再追高分音准。
+Total score is `0-100`.  
+Best strategy: aim for steady improvement, not instant perfection.
+
+- `Acc` (Accuracy)
+  - How close your sung pitch is to the target.
+  - Higher means smaller pitch error.
+  - High-score range is intentionally stricter.
+
+- `Stb` (Stability)
+  - How steady your pitch is over time.
+  - Higher means less wobble and drift.
+
+- `Lock`
+  - How much of your singing time stays in acceptable pitch zones.
+  - Time closer to target gets higher weight.
+  - Beginner-friendly: sustained in-range singing is rewarded, not only instant hit.
+
+- `Rhy` (Rhythm)
+  - How well your note timing and durations match the prompt.
+  - Better timing alignment gives higher score.
+
+### Relative mode scoring focus
+
+`Relative Contour` does not require matching the exact absolute pitch of the prompt.  
+It mainly checks:
+- melodic direction (up/down/flat)
+- relative interval relationships between notes
+- rhythm alignment
+
+So it is especially useful for “hear melody -> find your own key -> reproduce contour”.
 
 ---
 
-## 隐私与数据
+## Practical Improvement Tips
 
-- 音频只在浏览器内存中处理。
-- 不写入硬盘音频文件。
-- 不上传云端，不需要账号。
-- 切到下一题后，只保留新题的数据。
-
----
-
-## 常见问题
-
-- 麦克风没声音：检查浏览器权限，刷新页面后重试。
-- 听不到播放音：先点击页面任意按钮，解锁浏览器音频上下文。
-- 图表不出现：先完成本题第一次有效演唱（这是设计行为）。
+- Low `Acc`: reduce difficulty and focus on landing each note before moving.
+- Low `Stb`: shorten phrases, reduce volume swings, aim for smoother tone.
+- Low `Lock`: hold notes longer in-range instead of rushing transitions.
+- Low `Rhy`: count lightly first, then sing; fix timing before chasing perfect pitch.
 
 ---
 
-## 技术文档（给开发者）
+## Privacy and Data
 
-技术细节、公式和实现说明都在 `docs/`：
+- Audio is processed in browser memory only.
+- No audio files are written to disk.
+- No cloud upload and no account required.
+- Moving to a new question resets question-local attempt data.
+
+---
+
+## FAQ
+
+- No mic input: check browser mic permission, refresh, retry.
+- No playback sound: click any control once to unlock browser audio context.
+- No chart yet: first complete one valid scored attempt in the current question.
+
+---
+
+## Technical Docs (for developers)
+
+Implementation details and scoring internals are in `docs/`:
 - `docs/FEATURES.md`
 - `docs/SCORING.md`
 - `docs/ARCHITECTURE.md`
