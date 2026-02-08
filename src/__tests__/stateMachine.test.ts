@@ -7,7 +7,7 @@ function attempt(index: number, score: number, valid = true): AttemptResult {
     attemptIndex: index,
     valid,
     score,
-    subscores: { accuracy: score, stability: score, lock: score },
+    subscores: { accuracy: score, stability: score, lock: score, rhythm: score },
     curve: [],
     clip: new Float32Array(),
     sampleRate: 44_100,

@@ -1,131 +1,176 @@
 # SingBack 🎤
 
-SingBack is a focused pitch-matching practice app for singers.
+SingBack 是一个给日常练唱用的网页 App。  
+核心流程很简单：**先听标准音/旋律 -> 再跟唱 -> 立刻看分数和曲线 -> 再唱一次**。
 
-Core loop:
+它的目标不是“花哨打卡”，而是让你明确知道：
+- 你是偏高还是偏低
+- 偏了多少
+- 是音准问题、稳定性问题，还是节奏问题
 
-1. Play a generated target tone/melody
-2. Sing it back
-3. Get a 0-100 score with sub-scores
-4. Compare curves in three synchronized windows
-5. Retry immediately and improve
+---
 
-All processing runs locally in the browser.
+## 你会看到什么
 
-## Highlights
+每道题都有 3 个对比面板（坐标完全一致，方便一眼比较）：
+- `Current`：你刚唱完这次
+- `First`：这道题第一次有效演唱
+- `Best`：这道题当前最高分
 
-- Pure frontend MVP: no backend, no account, no cloud dependency
-- Three-window comparison
-  - `Current` (big)
-  - `First` (first valid attempt in this question)
-  - `Best` (highest score in this question)
-- Unified axes across all windows
-  - X axis: 0-10 seconds
-  - Y axis: semitone/cent logarithmic pitch axis
-- Configurable range + Do + tuning + difficulty
-- Match mode options:
-  - `Absolute Match`: match target absolute pitch
-  - `Relative Contour`: allow transposed singing, score relative intervals/shape
-  - In `Relative Contour`, `L1` uses a two-note prompt (not single-note)
-- In-memory recording only
-  - No audio file writing
-  - No localStorage audio persistence
-  - Question switch clears prior clips
+每个面板都会显示：
+- 总分（0-100）
+- 分项分：`Acc / Stb / Lock / Rhy`
 
-## Product Rules Implemented
+---
 
-- Default male: `min=105`, `max=530`, `do=130.8`
-- Default female: `min=175`, `max=880`, `do=261.6`
-- Gender selector shown in **Settings panel only**
-- Manual Hz inputs are preserved when gender changes (dirty flags)
-- Any setting change resets current question state to avoid stale curves/scores
-- Exercise generation is strictly bounded by user range
-- New question flow: auto play target -> `3,2,1,Start` -> auto recording
-- Before first scored attempt, all windows stay chart-hidden (audio-only)
-- Retry: no countdown, unlimited attempts
-- Max recording per attempt: `10s`
-- Auto stop: detect singing end by post-voice silence, then score automatically
-- Invalid short/no-voice attempts are rejected and do not replace first/best
+## 2 分钟跑起来
 
-## Tech Stack
-
-- Vite + React + TypeScript
-- Web Audio API (mic capture, synth playback, in-memory replay)
-- Canvas 2D for charts
-- Vitest + Testing Library
-
-## Quick Start
-
-### Prerequisites
-
+### 环境要求
 - Node.js 20+
 - npm 10+
 
-### Install
-
+### 安装
 ```bash
 npm install
 ```
 
-### Run in dev mode
-
+### 启动开发环境
 ```bash
 npm run dev
 ```
 
-Open the printed local URL (usually `http://localhost:5173`).
+然后打开终端里给出的地址（通常是 `http://localhost:5173`）。
 
-### Quality checks
-
+### 可选检查
 ```bash
 npm run lint
 npm run test:run
 npm run build
 ```
 
-## How to Use
+> 不需要 Python virtual environment。这个项目是纯前端 Node 工程。
 
-1. Open **Settings** and set `minHz`, `maxHz`, `doHz`, tuning, difficulty, and match mode.
-2. Click **Start Question**.
-3. App automatically plays target, then shows `3,2,1,Start`, then starts recording.
-4. Click **Play Target** any time to hear reference again.
-5. Sing and stop naturally; app detects end-of-singing and scores automatically.
-6. Click **Record Attempt** for retries.
-7. Compare `Current` vs `First` vs `Best` and replay each human recording.
-8. Click **Next Question** to clear question-local memory and generate a new one.
+---
 
-## Scoring
+## 日常使用流程
 
-Total score:
+1. 打开 `Settings`，先设好你的 `minHz / maxHz / doHz`。  
+2. 选择训练模式：`Absolute Match` 或 `Relative Contour`。  
+3. 选择难度 `L1-L6`。  
+4. 点击 `Start Question`，先听题目。  
+5. 倒计时 `3,2,1,Start` 后开始唱。  
+6. 唱完会自动停（或最多 10 秒），然后打分。  
+7. 用 `Record Attempt` 立刻重试，比较 Current / First / Best。  
 
-- `Score = 0.75 * Accuracy + 0.15 * Stability + 0.10 * Lock`
+---
 
-Sub-scores:
+## 设置项怎么理解
 
-- Accuracy: newbie-friendly smooth mapping from robust cent error (does not collapse to 0 too early)
-- Stability: local jitter (variance + derivative penalty)
-- Lock: time-to-enter and hold within ±25 cents for at least 300 ms
+- `minHz / maxHz`：你的安全发声范围，出题不会超这个边界。
+- `doHz`：你的 1（Do）基准。
+- `Key`：变调（1=C 到 1=B）。
+- `Match Mode`：
+  - `Absolute Match`：要求音高本身也对。
+  - `Relative Contour`：更看重旋律走向和音程关系。
+- `Difficulty`：控制题目的音数、跳进跨度、节奏复杂度。
+- `Tuning`：`12-TET` 或 `Just`。
 
-Mode behavior:
+---
 
-- `Absolute Match`: direct cent error to target pitch
-- `Relative Contour`: removes constant pitch offset before scoring, so contour/interval accuracy is rewarded
+## 每个 Level 在练什么
 
-More detail: `docs/SCORING.md`
+下面是“用户视角”的训练目标说明（不是算法参数表）。
 
-## Documentation
+### Absolute Match（绝对音准）
+- `L1`：单音持音，先把“唱准一个音”练稳。
+- `L2`：2-3 音，微小变化，开始练换音。
+- `L3`：3-4 音，开始出现更明显的上下行。
+- `L4`：4-5 音，旋律更长，要求连续控制。
+- `L5`：5-6 音，音高跨度更大，节奏更活。
+- `L6`：6-8 音，高密度短句，综合能力训练。
 
-- `docs/FEATURES.md`: feature list, limits, future roadmap
-- `docs/ARCHITECTURE.md`: module design and data flow
-- `docs/SCORING.md`: scoring math and thresholds
-- `docs/DEBUGGING.md`: troubleshooting and verification checklist
+### Relative Contour（相对旋律）
+- `L1`：2 音对比，先练“走向”对不对（上行/下行）。
+- `L2`：3-4 音，开始练短旋律的相对关系。
+- `L3`：4-5 音，加入更明显的音程变化。
+- `L4`：5-6 音，旋律更长、节奏更复杂。
+- `L5`：6-7 音，要求在更大跨度里保持轮廓准确。
+- `L6`：7-9 音，高复杂度旋律，练快速听辨+跟唱。
 
-## Browser Notes
+---
 
-- Mic access requires secure/user-approved context depending on browser policy.
-- First user gesture is needed in some browsers to unlock audio.
-- If permission is denied, refresh and allow microphone access.
+## 评分怎么读（通俗版）
+
+总分是 0-100。  
+实用建议：先追求“稳定进步”，不用一开始追求满分。
+
+- `Acc`（Accuracy，音准）
+  - 你唱得离目标音有多近。
+  - 分数越高，说明偏差越小。
+  - 越接近高分段，要求会越精细。
+
+- `Stb`（Stability，稳定）
+  - 你是否在抖、飘、忽高忽低。
+  - 高分说明线条更稳、控制更好。
+
+- `Lock`（锁定）
+  - 你有多少时间在“可接受音准区间”里。
+  - 在很准区间里的时间权重更高，偏得越多权重越低。
+  - 新手友好：不是“瞬间命中”才有分，而是“在可接受区间内待得越久分越高”。
+
+- `Rhy`（Rhythm，节奏）
+  - 你的换音时机和时值比例是否接近题目。
+  - 节奏越贴近参考，分越高。
+
+### Relative 模式的评分重点
+
+`Relative Contour` 不要求你必须唱在和参考完全同一个绝对音高上。  
+它主要看：
+- 旋律走向对不对（上/下/平）
+- 相邻音之间的相对距离是否合理
+- 节奏是否匹配
+
+所以它更适合练“听到旋律后快速找调并复现”。
+
+---
+
+## 看分后怎么调整（实战建议）
+
+- `Acc` 低：先降难度，减少音数，把每个音先“停稳再换”。
+- `Stb` 低：缩短句子、减小音量波动，先追求平稳出声。
+- `Lock` 低：别急着跑旋律，先把每个音“待住”。
+- `Rhy` 低：先用嘴轻数拍子，再唱；先把节奏做对再追高分音准。
+
+---
+
+## 隐私与数据
+
+- 音频只在浏览器内存中处理。
+- 不写入硬盘音频文件。
+- 不上传云端，不需要账号。
+- 切到下一题后，只保留新题的数据。
+
+---
+
+## 常见问题
+
+- 麦克风没声音：检查浏览器权限，刷新页面后重试。
+- 听不到播放音：先点击页面任意按钮，解锁浏览器音频上下文。
+- 图表不出现：先完成本题第一次有效演唱（这是设计行为）。
+
+---
+
+## 技术文档（给开发者）
+
+技术细节、公式和实现说明都在 `docs/`：
+- `docs/FEATURES.md`
+- `docs/SCORING.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DEBUGGING.md`
+
+---
 
 ## License
 
 MIT
+

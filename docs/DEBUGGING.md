@@ -10,18 +10,22 @@ npm run build
 
 ## Manual Smoke Checklist
 
-1. Open app and set range/do
+1. Open app and set range/do/key
 2. Change one setting (for example L2 -> L5) and confirm question state resets (no stale curves)
 3. Click `Start Question`
 4. Confirm all windows are chart-hidden before first scored attempt
 5. Confirm app auto-plays target, then shows `3,2,1,Start`
 6. Sing during recording; confirm auto stop after you finish (or max 10s fallback)
-7. Confirm score and sub-scores appear
+7. Confirm score and sub-scores appear (including rhythm)
 8. Confirm `First` saved only after first valid attempt
 9. Retry and confirm `Current` updates each time
 10. Confirm `Best` updates only when score improves
 11. Click replay for current/first/best and verify audio playback
-12. Click `Next Question` and verify previous attempts are cleared
+12. Replay should start near voice onset (with ~0.15s pre-roll), not from long initial silence
+13. Click `Next Question` and verify previous attempts are cleared
+
+Note:
+- live chart is intentionally delayed by about `0.2s` to match final scored curve shape.
 
 ## Common Issues
 
@@ -73,6 +77,18 @@ Fix:
 1. ensure `minHz < maxHz`
 2. ensure `Do` is between min and max
 3. keep range within `[50, 1200]`
+
+## Unexpected pitch zone (too high or too low)
+
+Symptoms:
+
+- generated prompts feel outside intended comfort range
+
+Fix:
+
+1. verify Key (`1=C` ... `1=B`) is what you expect
+2. verify `doHz` and vocal range values are correct
+3. remember generator uses transposed low4-high2 window intersected with vocal safety band
 
 ## Browser Compatibility Notes
 

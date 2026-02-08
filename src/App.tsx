@@ -14,17 +14,19 @@ import {
   COUNTDOWN_START_SECONDS,
   DEFAULT_GENDER,
   DIFFICULTY_OPTIONS,
+  KEY_OPTIONS,
+  LIVE_CURVE_DELAY_SECONDS,
   MATCH_MODE_OPTIONS,
   MAX_DISPLAY_SECONDS,
   MAX_RECORDING_SECONDS,
-  PITCH_GAP_BRIDGE_SECONDS,
+  REPLAY_VOICE_PREROLL_SECONDS,
   TUNING_OPTIONS,
   defaultsForGender
 } from './config/defaults'
-import { buildAxisConfig, hzToSemi, interpolateTargetHz } from './chart/axis'
+import { buildAxisConfig } from './chart/axis'
 import PitchCanvas from './chart/PitchCanvas'
 import { generateExercise } from './exercise/generator'
-import { evaluateAttempt, type RawSamplePoint } from './scoring/score'
+import { buildDisplayCurve, evaluateAttempt, type RawSamplePoint } from './scoring/score'
 import { MicCapture } from './audio/micCapture'
 import { MemoryRecorder } from './audio/memoryRecorder'
 import {
@@ -62,8 +64,6 @@ export default function App() {
   const finishingRef = useRef(false)
   const hasVoicedRef = useRef(false)
   const lastVoicedAtRef = useRef<number | null>(null)
-  const lastDisplayHzRef = useRef<number | null>(null)
-  const lastDisplayHzAtRef = useRef<number | null>(null)
 
   useEffect(() => {
     machineRef.current = machine
@@ -104,7 +104,7 @@ export default function App() {
         yRangeSemi: 16
       }
     }
-    return buildAxisConfig(exercise, questionSettings.doHz)
+    return buildAxisConfig(exercise, exercise.effectiveDoHz)
   }, [exercise, questionSettings])
 
   const currentCurve =
@@ -123,12 +123,23 @@ export default function App() {
     }
   }, [machine.question.first?.score])
 
+  function formatSubscores(attempt: AttemptResult | undefined): string {
+    const subs = attempt?.subscores
+    if (!subs) {
+      return '(Acc --, Stb --, Lock --, Rhy --)'
+    }
+    return `(Acc ${subs.accuracy}, Stb ${subs.stability}, Lock ${subs.lock}, Rhy ${subs.rhythm})`
+  }
+
   function validateSettings(next: UserSettings): string | null {
     if (next.minHz < 50 || next.maxHz > 1200 || next.minHz >= next.maxHz) {
       return 'Range must satisfy 50 <= minHz < maxHz <= 1200'
     }
     if (next.doHz < next.minHz || next.doHz > next.maxHz) {
       return 'Do must stay inside your min/max vocal range'
+    }
+    if (!Number.isInteger(next.keySemitone) || next.keySemitone < 0 || next.keySemitone > 11) {
+      return 'Key must be an integer semitone between 0 and 11.'
     }
     return null
   }
@@ -138,8 +149,6 @@ export default function App() {
     recorderRef.current = null
     hasVoicedRef.current = false
     lastVoicedAtRef.current = null
-    lastDisplayHzRef.current = null
-    lastDisplayHzAtRef.current = null
     setIsRecording(false)
     setLiveCurve([])
   }
@@ -312,22 +321,10 @@ export default function App() {
           recorderRef.current = recorder
         }
 
-        let displayHz: number | null = frame.hz
-        if (frame.hz !== null) {
-          lastDisplayHzRef.current = frame.hz
-          lastDisplayHzAtRef.current = frame.t
-        } else if (
-          lastDisplayHzRef.current !== null &&
-          lastDisplayHzAtRef.current !== null &&
-          frame.t - lastDisplayHzAtRef.current <= PITCH_GAP_BRIDGE_SECONDS
-        ) {
-          displayHz = lastDisplayHzRef.current
-        }
-
         recorder.push(frame.block)
         rawCurveRef.current.push({
           t: frame.t,
-          hz: displayHz
+          hz: frame.hz
         })
 
         if (frame.hz !== null) {
@@ -335,28 +332,25 @@ export default function App() {
           lastVoicedAtRef.current = frame.t
         }
 
-        const targetHz = interpolateTargetHz(frameExercise.target, frame.t)
-        const centErr =
-          displayHz === null || targetHz === null || targetHz <= 0
-            ? null
-            : 1200 * Math.log2(displayHz / targetHz)
-
-        const point: AttemptCurvePoint = {
-          t: frame.t,
-          hz: displayHz,
-          y: displayHz === null ? null : hzToSemi(displayHz, frameSettings.doHz),
-          centErr
-        }
-
-        setLiveCurve((prev) => {
-          const next = [...prev, point]
-          const minT = Math.max(0, frame.t - MAX_DISPLAY_SECONDS)
-          let trim = 0
-          while (trim < next.length && next[trim].t < minT) {
-            trim += 1
-          }
-          return trim > 0 ? next.slice(trim) : next
+        const preview = buildDisplayCurve({
+          rawCurve: rawCurveRef.current,
+          target: frameExercise.target,
+          doHz: frameExercise.effectiveDoHz,
+          mode: frameSettings.mode
         })
+        if (preview.voiceStartSec === null) {
+          setLiveCurve([])
+        } else {
+          const delayedVisibleLimit = Math.max(
+            0,
+            frame.t - preview.voiceStartSec - LIVE_CURVE_DELAY_SECONDS
+          )
+          if (delayedVisibleLimit <= 0) {
+            setLiveCurve([])
+          } else {
+            setLiveCurve(preview.curve.filter((point) => point.t <= delayedVisibleLimit))
+          }
+        }
 
         if (frame.t >= MAX_RECORDING_SECONDS) {
           void finishRecording()
@@ -421,7 +415,8 @@ export default function App() {
       attemptIndex: machineRef.current.attemptsCount + 1,
       rawCurve: rawCurveRef.current,
       target: activeExercise.target,
-      doHz: activeSettings.doHz,
+      notes: activeExercise.notes,
+      doHz: activeExercise.effectiveDoHz,
       mode: activeSettings.mode,
       clip,
       sampleRate: micRef.current?.sampleRate ?? 44100
@@ -437,7 +432,7 @@ export default function App() {
       }
     } else {
       setStatus(
-        `Scored ${attempt.score}/100 (Acc ${attempt.subscores?.accuracy}, Stb ${attempt.subscores?.stability}, Lock ${attempt.subscores?.lock})`
+        `Scored ${attempt.score}/100 (Acc ${attempt.subscores?.accuracy}, Stb ${attempt.subscores?.stability}, Lock ${attempt.subscores?.lock}, Rhy ${attempt.subscores?.rhythm})`
       )
     }
 
@@ -489,12 +484,60 @@ export default function App() {
     try {
       setReplayPlaying(true)
       const ctx = await ensureAudioContext(audioCtxRef as AudioContextRef)
-      await playClip(ctx, attempt.clip, attempt.sampleRate)
+      const startSec = resolveReplayStartSec(attempt)
+      const startSample = Math.max(0, Math.floor(startSec * attempt.sampleRate))
+      const trimmed = attempt.clip.subarray(startSample)
+      await playClip(ctx, trimmed, attempt.sampleRate)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Replay failed')
     } finally {
       setReplayPlaying(false)
     }
+  }
+
+  function resolveReplayStartSec(attempt: AttemptResult): number {
+    const detected =
+      typeof attempt.voiceStartSec === 'number'
+        ? attempt.voiceStartSec
+        : detectClipVoiceStartSec(attempt.clip, attempt.sampleRate)
+    if (detected === null || !Number.isFinite(detected)) {
+      return 0
+    }
+    return Math.max(0, detected - REPLAY_VOICE_PREROLL_SECONDS)
+  }
+
+  function detectClipVoiceStartSec(clip: Float32Array, sampleRate: number): number | null {
+    if (clip.length === 0 || sampleRate <= 0) {
+      return null
+    }
+
+    const windowSize = Math.max(128, Math.floor(sampleRate * 0.02))
+    const hopSize = Math.max(64, Math.floor(sampleRate * 0.01))
+    const rmsThreshold = 0.012
+    const requiredRuns = 3
+
+    let run = 0
+    let runStart = 0
+    for (let start = 0; start + windowSize <= clip.length; start += hopSize) {
+      let sum = 0
+      for (let i = start; i < start + windowSize; i += 1) {
+        sum += clip[i] * clip[i]
+      }
+      const rms = Math.sqrt(sum / windowSize)
+      if (rms >= rmsThreshold) {
+        if (run === 0) {
+          runStart = start
+        }
+        run += 1
+        if (run >= requiredRuns) {
+          return runStart / sampleRate
+        }
+      } else {
+        run = 0
+      }
+    }
+
+    return null
   }
 
   async function retryNow(): Promise<void> {
@@ -513,7 +556,7 @@ export default function App() {
     <div className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">SingBack v0.1</p>
+          <p className="eyebrow">SingBack v0.2</p>
           <h1>Hear it. Sing it back. Improve visibly.</h1>
           <p className="lead">
             This training loop is tuned for pitch accuracy and repeatable progress in your personal vocal
@@ -563,6 +606,24 @@ export default function App() {
                 value={settings.doHz}
                 onChange={(event) => updateNumberField('doHz', event.target.value, 'dirtyDoHz')}
               />
+            </label>
+            <label>
+              Key
+              <select
+                value={settings.keySemitone}
+                onChange={(event) =>
+                  applySettingsUpdate((prev) => ({
+                    ...prev,
+                    keySemitone: Number(event.target.value)
+                  }))
+                }
+              >
+                {KEY_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Tuning
@@ -657,6 +718,7 @@ export default function App() {
 
       <section className="status-bar">
         <span className="chip">Phase: {machine.phase}</span>
+        <span className="chip">Key: {KEY_OPTIONS.find((item) => item.value === settings.keySemitone)?.label ?? '1=C'}</span>
         <span className="chip">Current: {currentScore ?? '--'}</span>
         <span className="chip">First: {firstScore ?? '--'}</span>
         <span className="chip">Best: {bestScore ?? '--'}</span>
@@ -665,7 +727,7 @@ export default function App() {
 
       <section className="panel panel-current">
         <div className="panel-head">
-          <h2>Window 1 · Current <span className="score-pill">Score {currentScore ?? '--'}</span></h2>
+          <h2>Current <span className="score-pill">Score {currentScore ?? '--'}</span></h2>
           <button
             type="button"
             className="btn ghost"
@@ -675,6 +737,7 @@ export default function App() {
             Replay Current
           </button>
         </div>
+        <p className="subscore-row">{formatSubscores(machine.question.current)}</p>
         {countdownLabel !== null ? (
           <div className="countdown">{countdownLabel}</div>
         ) : hideChartsUntilFirstScore ? (
@@ -688,7 +751,7 @@ export default function App() {
             target={exercise?.target ?? []}
             attempt={currentCurve}
             axis={axis}
-            doHz={questionSettings?.doHz ?? settings.doHz}
+            doHz={exercise?.effectiveDoHz ?? settings.doHz}
             durationSec={MAX_DISPLAY_SECONDS}
           />
         )}
@@ -697,7 +760,7 @@ export default function App() {
       <section className="panel-grid">
         <article className="panel">
           <div className="panel-head">
-            <h3>Window 2 · First <span className="score-pill">Score {firstScore ?? '--'}</span></h3>
+            <h3>First <span className="score-pill">Score {firstScore ?? '--'}</span></h3>
             <button
               type="button"
               className="btn ghost"
@@ -707,6 +770,7 @@ export default function App() {
             Replay First
           </button>
         </div>
+          <p className="subscore-row">{formatSubscores(machine.question.first)}</p>
           {hideChartsUntilFirstScore ? (
             <div className="first-attempt-mask">
               <p>First chart hidden</p>
@@ -718,7 +782,7 @@ export default function App() {
               target={exercise?.target ?? []}
               attempt={machine.question.first?.curve ?? []}
               axis={axis}
-              doHz={questionSettings?.doHz ?? settings.doHz}
+              doHz={exercise?.effectiveDoHz ?? settings.doHz}
               durationSec={MAX_DISPLAY_SECONDS}
             />
           )}
@@ -726,7 +790,7 @@ export default function App() {
 
         <article className="panel">
           <div className="panel-head">
-            <h3>Window 3 · Best <span className="score-pill">Score {bestScore ?? '--'}</span></h3>
+            <h3>Best <span className="score-pill">Score {bestScore ?? '--'}</span></h3>
             <button
               type="button"
               className="btn ghost"
@@ -736,6 +800,7 @@ export default function App() {
             Replay Best
           </button>
         </div>
+          <p className="subscore-row">{formatSubscores(machine.question.best)}</p>
           {hideChartsUntilFirstScore ? (
             <div className="first-attempt-mask">
               <p>Best chart hidden</p>
@@ -747,7 +812,7 @@ export default function App() {
               target={exercise?.target ?? []}
               attempt={machine.question.best?.curve ?? []}
               axis={axis}
-              doHz={questionSettings?.doHz ?? settings.doHz}
+              doHz={exercise?.effectiveDoHz ?? settings.doHz}
               durationSec={MAX_DISPLAY_SECONDS}
             />
           )}

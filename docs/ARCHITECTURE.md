@@ -2,94 +2,108 @@
 
 ## Overview
 
-SingBack is a pure frontend application with browser-local DSP and rendering.
+SingBack is a browser-only app with local DSP, local scoring, and local rendering.
 
-### Runtime layers
+Runtime layers:
 
-1. **UI Layer** (`src/App.tsx`, `src/chart/`)
-2. **Domain Layer** (`src/exercise/`, `src/scoring/`, `src/app/stateMachine.ts`)
-3. **Audio Layer** (`src/audio/`)
-4. **Config + Types** (`src/config/`, `src/types/`)
+1. UI Layer (`src/App.tsx`, `src/chart/`)
+2. Domain Layer (`src/exercise/`, `src/scoring/`, `src/app/stateMachine.ts`)
+3. Audio Layer (`src/audio/`)
+4. Config + Types (`src/config/`, `src/types/`)
 
-## Module Breakdown
-
-## `src/types/index.ts`
-
-Defines public app contracts:
+## Core Contracts (`src/types/index.ts`)
 
 - `UserSettings`
+  - includes `keySemitone` for 12-key transposition
 - `ExerciseSpec`
+  - includes `effectiveDoHz`
+  - includes structured `notes: NoteEvent[]`
 - `AttemptResult`
-- `QuestionState`
-- core enums/unions
+  - includes `subscores.rhythm`
+  - includes optional `voiceStartSec` for replay trimming
 
-## `src/config/defaults.ts`
+## Config (`src/config/defaults.ts`)
 
-Centralized constants:
+Central constants:
 
-- Male/female defaults
-- countdown / max recording durations
-- scoring weights and thresholds
+- male/female defaults
+- key list (`1=C` ... `1=B`)
+- countdown / recording limits
+- score weights and thresholds
 
-## `src/exercise/generator.ts`
+## Exercise Generator (`src/exercise/generator.ts`)
 
-Creates bounded target exercises:
+Responsibilities:
 
-- computes center band from `minHz/maxHz`
-- builds semitone paths by difficulty
-- maps semitone to Hz under selected tuning
-- returns dense target timeline for playback/chart/scoring
+1. Compute transposed root (`effectiveDoHz`) from `doHz + keySemitone`
+2. Build playable band from
+   - transposed low4-high2 musical window
+   - plus 5% safe-margin vocal range
+3. Sample note sequences with
+   - 90% core-zone preference (middle-octave natural 1..7)
+   - extension-zone fallback
+4. Generate variable rhythm durations per level
+5. Emit
+   - note events (`start/end/hz/semi/jianpu/inCoreZone`)
+   - dense target timeline for playback and scoring
 
-## `src/audio/pitchTracker.ts`
+## Audio Layer
 
-Autocorrelation-based pitch tracker:
+### `src/audio/pitchTracker.ts`
 
+- autocorrelation pitch detection
 - RMS silence gate
-- lag search within Hz bounds
 - confidence threshold
 - median + EMA smoothing
 
-## `src/audio/micCapture.ts`
+### `src/audio/micCapture.ts`
 
-Microphone capture manager:
+- mic stream lifecycle
+- ScriptProcessor frame callback
+- emits `(t, block, rms, hz)` style frames
 
-- acquires mic stream
-- reads blocks with ScriptProcessorNode
-- emits `(t, rms, hz, block)` frames
-- does not persist audio files
+### `src/audio/memoryRecorder.ts`
 
-## `src/audio/memoryRecorder.ts`
+- keeps clip as in-memory `Float32Array`
+- max-duration clipping
+- no disk persistence
 
-In-memory clip buffer:
+### `src/audio/tonePlayer.ts`
 
-- appends incoming PCM blocks
-- trims to max configured duration
-- merges to single `Float32Array`
+- target phrase playback
+- in-memory clip replay
 
-## `src/scoring/score.ts`
+## Scoring (`src/scoring/score.ts`)
 
-Attempt evaluation:
+Pipeline:
 
-- detects singing start
-- rebases attempt time to singing start
-- computes cent error against target
-- supports absolute and relative-contour scoring modes
-- bridges short pitch gaps to avoid fragile curve breaks
-- validates coverage/duration
-- returns total + sub-scores
-- decides `best` by score, then accuracy, then earlier attempt index
+1. Bridge short pitch gaps
+2. Detect singing start and rebase time
+3. Build curve (`hz`, `y`, `centErr`)
+4. Validate coverage/duration
+5. Compute sub-scores
+   - Accuracy
+   - Stability
+   - Lock
+   - Rhythm
+6. Aggregate total score
+7. Return attempt payload used by state machine and charts
 
-## `src/chart/PitchCanvas.tsx`
+Mode behavior:
 
-Custom canvas renderer:
+- `absolute`: direct cent scoring
+- `relative`: remove constant pitch offset before pitch scoring
 
-- draws grid and axis labels
-- renders target (blue) and sung curve (orange)
-- handles broken voiced segments without forced interpolation
+## Chart Rendering (`src/chart/PitchCanvas.tsx`)
 
-## `src/app/stateMachine.ts`
+- shared axis mapping across all windows
+- blue target vs orange sung curve
+- disconnected rendering across unvoiced gaps
+- Y-axis labels shown in jianpu with accidentals and octave dots
 
-Explicit state transitions:
+## State Machine (`src/app/stateMachine.ts`)
+
+Phases:
 
 - `idle`
 - `first_countdown`
@@ -97,21 +111,27 @@ Explicit state transitions:
 - `evaluating`
 - `practice_loop`
 
+Role:
+
+- tracks attempts for current question only
+- maintains `current`, `first`, `best`
+- resets cleanly on settings change or next question
+
 ## Data Flow
 
-1. User sets range/settings
-2. Any settings change resets current question state to avoid stale curve carryover.
-3. `generateExercise()` creates target
-4. User clicks Start/Next -> auto target playback -> `3,2,1,Start` -> recording
-5. Mic frames feed pitch tracker + in-memory recorder
-6. On detected singing end or timeout -> `evaluateAttempt()`
-7. State machine updates `current/first/best`
-8. Three chart windows render with shared axis config
+1. User updates settings (range/do/key/tuning/mode/difficulty)
+2. Settings change resets question-local state
+3. `generateExercise()` returns bounded phrase (`notes + target`)
+4. Start question -> target playback -> countdown -> recording
+5. Mic frames feed in-memory recorder + delayed live display curve (same post-process path as final scoring)
+6. Auto/Manual stop -> `evaluateAttempt()`
+7. State machine updates attempts and best selection
+8. Three windows render synchronized comparison
 
 ## Failure Paths
 
-- mic permission denied
-- no voiced frames
-- voiced duration too short
+- microphone permission denied
+- no voiced signal
+- too-short voiced attempt
 
-Failures do not overwrite `first`/`best`.
+Invalid attempts do not replace `first` or `best`.

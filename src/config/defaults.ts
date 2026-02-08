@@ -20,6 +20,8 @@ export const DEFAULT_GENDER: Gender = 'male'
 
 export const DEFAULT_MATCH_MODE: MatchMode = 'absolute'
 
+export const DEFAULT_KEY_SEMITONE = 0
+
 export const COUNTDOWN_SECONDS = 3
 
 export const COUNTDOWN_START_SECONDS = 0.5
@@ -32,25 +34,43 @@ export const PITCH_GAP_BRIDGE_SECONDS = 0.22
 
 export const MAX_RECORDING_SECONDS = 10
 
-export const MAX_DISPLAY_SECONDS = 10
+export const MAX_DISPLAY_SECONDS = 8
+
+export const LIVE_CURVE_DELAY_SECONDS = 0.2
+
+export const REPLAY_VOICE_PREROLL_SECONDS = 0.15
 
 export const MIN_VOICED_DURATION_SECONDS = 0.8
 
 export const MIN_VOICED_COVERAGE = 0.3
 
 export const SCORE_WEIGHTS = {
-  accuracy: 0.75,
-  stability: 0.15,
-  lock: 0.1
+  accuracy: 0.7,
+  stability: 0.1,
+  lock: 0.1,
+  rhythm: 0.1
 } as const
 
-export const LOCK_THRESHOLD_CENTS = 25
-
-export const LOCK_HOLD_SECONDS = 0.3
+export const LOCK_THRESHOLD_CENTS = 35
 
 export const TARGET_RESOLUTION_SECONDS = 0.02
 
 export const SAMPLE_RATE_FALLBACK = 44100
+
+export const KEY_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 0, label: '1=C' },
+  { value: 1, label: '1=C#/Db' },
+  { value: 2, label: '1=D' },
+  { value: 3, label: '1=D#/Eb' },
+  { value: 4, label: '1=E' },
+  { value: 5, label: '1=F' },
+  { value: 6, label: '1=F#/Gb' },
+  { value: 7, label: '1=G' },
+  { value: 8, label: '1=G#/Ab' },
+  { value: 9, label: '1=A' },
+  { value: 10, label: '1=A#/Bb' },
+  { value: 11, label: '1=B' }
+]
 
 export function defaultsForGender(gender: Gender): { minHz: number; maxHz: number; doHz: number } {
   if (gender === 'female') {
@@ -66,6 +86,7 @@ export function buildInitialSettings(): UserSettings {
     minHz: defaults.minHz,
     maxHz: defaults.maxHz,
     doHz: defaults.doHz,
+    keySemitone: DEFAULT_KEY_SEMITONE,
     tuning: DEFAULT_TUNING,
     difficulty: DEFAULT_DIFFICULTY,
     mode: DEFAULT_MATCH_MODE,

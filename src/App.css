@@ -255,6 +255,12 @@ h1 {
   padding: 0.15rem 0.55rem;
 }
 
+.subscore-row {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
 @media (max-width: 940px) {
   .settings-grid {
     grid-template-columns: repeat(2, minmax(130px, 1fr));

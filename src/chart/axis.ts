@@ -6,7 +6,41 @@ export interface AxisConfig {
   yRangeSemi: number
 }
 
+export interface JianpuLabelParts {
+  base: string
+  upperDots: number
+  lowerDots: number
+}
+
 const Y_MARGIN_SEMI = 0.5
+
+const CHROMATIC_JIANPU_LABELS = ['1', '#1', '2', '#2', '3', '4', '#4', '5', '#5', '6', '#6', '7']
+
+function floorMod(value: number, mod: number): number {
+  return ((value % mod) + mod) % mod
+}
+
+export function semitoneToJianpuLabel(semi: number): string {
+  const parts = semitoneToJianpuParts(semi)
+  let label = parts.base
+  if (parts.upperDots > 0) {
+    label += '\u0307'.repeat(parts.upperDots)
+  } else if (parts.lowerDots > 0) {
+    label += '\u0323'.repeat(parts.lowerDots)
+  }
+  return label
+}
+
+export function semitoneToJianpuParts(semi: number): JianpuLabelParts {
+  const rounded = Math.round(semi)
+  const octave = Math.floor(rounded / 12)
+  const withinOctave = floorMod(rounded, 12)
+  return {
+    base: CHROMATIC_JIANPU_LABELS[withinOctave],
+    upperDots: Math.max(0, octave),
+    lowerDots: Math.max(0, -octave)
+  }
+}
 
 export function hzToSemi(hz: number, doHz: number): number {
   return 12 * Math.log2(hz / doHz)

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { AttemptCurvePoint, ExerciseSpec } from '../types'
-import type { AxisConfig } from './axis'
+import { semitoneToJianpuParts, type AxisConfig, type JianpuLabelParts } from './axis'
 
 interface PitchCanvasProps {
   target: ExerciseSpec['target']
@@ -106,10 +106,39 @@ function drawGrid(
 
   ctx.textAlign = 'right'
   ctx.textBaseline = 'middle'
-  for (let semi = startSemi; semi <= endSemi; semi += 2) {
+  ctx.font = '10px "Space Grotesk", "Avenir Next", sans-serif'
+  for (let semi = startSemi; semi <= endSemi; semi += 1) {
     const y = semiToY(semi, axis, bounds)
-    ctx.fillText(`${semi}`, bounds.left - 6, y)
+    const label = semitoneToJianpuParts(semi)
+    drawJianpuLabel(ctx, label, bounds.left - 6, y)
   }
+}
+
+function drawJianpuLabel(
+  ctx: CanvasRenderingContext2D,
+  label: JianpuLabelParts,
+  x: number,
+  y: number
+): void {
+  ctx.fillText(label.base, x, y)
+
+  const dotX = x - 2
+  const dotRadius = 1.15
+  const dotGap = 3.3
+
+  for (let i = 0; i < label.upperDots; i += 1) {
+    drawDot(ctx, dotX, y - 6 - i * dotGap, dotRadius)
+  }
+
+  for (let i = 0; i < label.lowerDots; i += 1) {
+    drawDot(ctx, dotX, y + 6 + i * dotGap, dotRadius)
+  }
+}
+
+function drawDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fill()
 }
 
 function drawTarget(
