@@ -20,6 +20,7 @@ Each question has 3 comparison panels (same axes for direct visual comparison):
 Each panel shows:
 - total score (`0-100`)
 - subscores: `Acc / Stb / Lock / Rhy`
+- a clean synthesized target tone designed as a pitch reference (sine-based "pitch ruler")
 
 ---
 
@@ -173,4 +174,3 @@ Implementation details and scoring internals are in `docs/`:
 ## License
 
 MIT
-

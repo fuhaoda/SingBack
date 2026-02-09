@@ -38,6 +38,7 @@
 21. Y-axis jianpu labels with accidentals and octave dots
 22. Replay silence-trim with `~0.15s` pre-roll before detected voice onset
 23. Live curve rendered with `0.2s` delay to align with final post-processed curve
+24. Sine-based target playback tone to maximize pitch discrimination ("pitch ruler" sound)
 
 ## UX Principles
 

@@ -4,6 +4,12 @@ export interface AudioContextRef {
   current: AudioContext | null
 }
 
+const PITCH_RULER_LEVEL = 0.18
+const MIN_ATTACK_SECONDS = 0.006
+const MAX_ATTACK_SECONDS = 0.014
+const MIN_RELEASE_SECONDS = 0.018
+const MAX_RELEASE_SECONDS = 0.05
+
 export async function ensureAudioContext(ctxRef: AudioContextRef): Promise<AudioContext> {
   if (!ctxRef.current) {
     const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -21,7 +27,8 @@ export async function ensureAudioContext(ctxRef: AudioContextRef): Promise<Audio
 export function playExerciseTone(ctx: AudioContext, exercise: ExerciseSpec): Promise<void> {
   stopActiveTone(ctx)
   const master = ctx.createGain()
-  master.gain.setValueAtTime(0.24, ctx.currentTime)
+  // Keep the target tone clean and stable: sine wave as a "pitch ruler".
+  master.gain.setValueAtTime(PITCH_RULER_LEVEL, ctx.currentTime)
   master.connect(ctx.destination)
 
   const stepBoundaries: number[] = []
@@ -45,21 +52,27 @@ export function playExerciseTone(ctx: AudioContext, exercise: ExerciseSpec): Pro
 
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
-    osc.type = 'triangle'
-    osc.frequency.setValueAtTime(hz, ctx.currentTime + start)
+    osc.type = 'sine'
+    const segmentStart = ctx.currentTime + start
+    const segmentEnd = ctx.currentTime + end
+    const segmentDuration = Math.max(0.001, end - start)
+    osc.frequency.setValueAtTime(hz, segmentStart)
 
-    const attack = 0.02
-    const release = 0.06
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime + start)
-    gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + start + attack)
-    gain.gain.setValueAtTime(0.2, ctx.currentTime + end - release)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + end)
+    const attack = Math.min(MAX_ATTACK_SECONDS, Math.max(MIN_ATTACK_SECONDS, segmentDuration * 0.3))
+    const release = Math.min(MAX_RELEASE_SECONDS, Math.max(MIN_RELEASE_SECONDS, segmentDuration * 0.4))
+    const peakAt = Math.min(segmentEnd, segmentStart + attack)
+    const releaseStart = Math.max(peakAt, segmentEnd - release)
+
+    gain.gain.setValueAtTime(0.0001, segmentStart)
+    gain.gain.exponentialRampToValueAtTime(1, peakAt)
+    gain.gain.setValueAtTime(1, releaseStart)
+    gain.gain.exponentialRampToValueAtTime(0.0001, segmentEnd)
 
     osc.connect(gain)
     gain.connect(master)
 
-    osc.start(ctx.currentTime + start)
-    osc.stop(ctx.currentTime + end)
+    osc.start(segmentStart)
+    osc.stop(segmentEnd)
   }
 
   const doneInMs = Math.ceil(exercise.durationSec * 1000)
