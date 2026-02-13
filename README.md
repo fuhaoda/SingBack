@@ -51,6 +51,45 @@ npm run build
 
 > No Python virtual environment is required. This is a pure frontend Node project.
 
+### Local preview of GitHub Pages build
+```bash
+npm run build:pages
+./start_local.sh
+```
+
+Open `http://127.0.0.1:8080`.
+
+If `8080` is already in use, run:
+```bash
+cd docs
+python3 -m http.server 8090
+```
+Then open `http://127.0.0.1:8090`.
+
+### Deploy to GitHub Pages (`main/docs`)
+1. Build Pages artifacts:
+```bash
+npm run build:pages
+```
+2. Commit and push both source changes and updated `docs/` artifacts to `main`.
+3. In GitHub repository settings, set:
+   - `Settings -> Pages`
+   - `Source: Deploy from a branch`
+   - `Branch: main`
+   - `Folder: /docs`
+4. Wait for Pages to finish publishing, then open:
+   - `https://fuhaoda.github.io/SingBack/`
+
+### Release checklist (recommended)
+```bash
+npm run test:run
+npm run lint
+npm run build
+npm run build:pages
+```
+
+Commit all source + `docs/` artifact changes in the same commit.
+
 ---
 
 ## Daily Usage Flow
@@ -163,11 +202,12 @@ So it is especially useful for “hear melody -> find your own key -> reproduce 
 
 ## Technical Docs (for developers)
 
-Implementation details and scoring internals are in `docs/`:
-- `docs/FEATURES.md`
-- `docs/SCORING.md`
-- `docs/ARCHITECTURE.md`
-- `docs/DEBUGGING.md`
+Implementation details and scoring internals are in `dev-docs/`:
+- `dev-docs/FEATURES.md`
+- `dev-docs/SCORING.md`
+- `dev-docs/ARCHITECTURE.md`
+- `dev-docs/DEBUGGING.md`
+- `dev-docs/DEPLOY_GITHUB_PAGES.md`
 
 ---
 
